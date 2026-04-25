@@ -62,6 +62,7 @@ def apply_sort_relevancia(driver, wait):
 
 
 
+# MAIN
 def main():
     browser = sys.argv[1] if len(sys.argv) > 1 else os.getenv("BROWSER", "chrome")
     SCREENSHOT_DIR.mkdir(exist_ok=True)

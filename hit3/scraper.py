@@ -46,38 +46,6 @@ def apply_tienda_oficial(driver, wait):
     click_with_scroll(driver, el)
     wait_results(wait)
 
-# def apply_tienda_oficial(driver, wait):
-#     # Buscar el grupo "Tienda oficial" y expandirlo si está colapsado
-#     try:
-#         grupo = driver.find_element(
-#             By.XPATH,
-#             "//div[contains(@class,'ui-search-filter-dl')]"
-#             "[.//*[normalize-space()='Solo tiendas oficiales']]"
-#         )
-#     except NoSuchElementException:
-#         grupo = None
-
-#     if grupo is not None:
-#         # Si el grupo tiene un link "Mostrar más" o botón colapsado, expandirlo
-#         botones = grupo.find_elements(
-#             By.XPATH, ".//button | .//a[contains(@class,'show-more')]"
-#         )
-#         for b in botones:
-#             txt = b.text.lower()
-#             if "más" in txt or "mostrar" in txt or "ver" in txt:
-#                 click_with_scroll(driver, b)
-#                 break
-
-#     # Click sobre el "Sí" del grupo de Tienda oficial específicamente
-#     el = wait.until(EC.presence_of_element_located((
-#         By.XPATH,
-#         "//div[contains(@class,'ui-search-filter-dl')]"
-#         "[.//*[normalize-space()='Solo tiendas oficiales']]"
-#         "//a[normalize-space()='Sí']"
-#     )))
-#     click_with_scroll(driver, el)
-#     wait_results(wait)
-
 
 def apply_sort_relevancia(driver, wait):
     trigger = wait.until(EC.element_to_be_clickable(

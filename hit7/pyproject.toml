@@ -1,0 +1,20 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=. --cov-report=term-missing --cov-report=html:coverage_html --cov-fail-under=70"
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "conftest.py",
+    ".venv/*",
+    "setup.py",
+    "scraper.py",
+    "logging_setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

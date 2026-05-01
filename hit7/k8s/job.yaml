@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: scraper-once
+  labels:
+    app: ml-scraper
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: ml-scraper
+        job-type: one-off
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: scraper
+          image: ml-scraper:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: scraper-config
+          volumeMounts:
+            - name: output
+              mountPath: /app/output
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      volumes:
+        - name: output
+          persistentVolumeClaim:
+            claimName: scraper-output

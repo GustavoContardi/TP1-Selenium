@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scraper-hourly
+  labels:
+    app: ml-scraper
+spec:
+  schedule: "0 * * * *"
+  timeZone: "America/Argentina/Buenos_Aires"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app: ml-scraper
+            job-type: scheduled
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: scraper
+              image: ml-scraper:latest
+              imagePullPolicy: IfNotPresent
+              envFrom:
+                - configMapRef:
+                    name: scraper-config
+              volumeMounts:
+                - name: output
+                  mountPath: /app/output
+              resources:
+                requests:
+                  memory: "512Mi"
+                  cpu: "500m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "1000m"
+          volumes:
+            - name: output
+              persistentVolumeClaim:
+                claimName: scraper-output

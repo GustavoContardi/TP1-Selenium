@@ -1,0 +1,23 @@
+name: Validate Kubernetes Manifests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-k8s:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Validate Kubernetes manifests (dry-run client)
+        run: |
+          for f in hit7/k8s/*.yaml; do
+            echo "Validando $f ..."
+            kubectl apply --dry-run=client -f "$f" && echo "OK: $f" || { echo "FALLO: $f"; exit 1; }
+          done

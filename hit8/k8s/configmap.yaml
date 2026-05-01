@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scraper-config
+  labels:
+    app: ml-scraper
+data:
+  BROWSER: "chrome"
+  HEADLESS: "true"
+  LOG_LEVEL: "INFO"
+  MAX_PAGES: "3"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "scraper_db"
+  PRODUCTS: |
+    bicicleta rodado 29
+    iPhone 16 Pro Max
+    GeForce RTX 5090

@@ -1,3 +1,5 @@
 /.venv
 /prompts
 output/
+.coverage
+coverage_html/

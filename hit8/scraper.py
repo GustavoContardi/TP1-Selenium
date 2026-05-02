@@ -10,13 +10,14 @@ Variables de entorno relevantes:
   PRODUCTS   — lista de productos separados por newline
   MAX_PAGES  — páginas a paginar por producto (default: "3")
   POSTGRES_HOST — si está definido, activa la escritura a Postgres
+  DELAY_BETWEEN_PRODUCTS — segundos entre productos (default: "5")
 """
 
 import os
-import sys
 import json
 import logging
 import re
+import time
 from pathlib import Path
 
 from selenium.webdriver.support.ui import WebDriverWait
@@ -30,6 +31,8 @@ from db import run_migrations, save_results, postgres_enabled
 OUTPUT_DIR = Path(__file__).parent / "output"
 
 logger = logging.getLogger(__name__)
+
+DELAY_BETWEEN_PRODUCTS = int(os.getenv("DELAY_BETWEEN_PRODUCTS", "5"))
 
 
 # ---------------------------------------------------------------------------
@@ -72,11 +75,11 @@ def main() -> None:
     products = get_products()
     browser = os.getenv("BROWSER", "chrome")
     headless = os.getenv("HEADLESS", "false").lower() == "true"
-    max_pages = MAX_PAGES  # Leído de MAX_PAGES en pagination.py (desde entorno)
+    max_pages = MAX_PAGES
 
     logger.info(
-        "Iniciando scraper | productos=%d | browser=%s | headless=%s | max_pages=%d",
-        len(products), browser, headless, max_pages,
+        "Iniciando scraper | productos=%d | browser=%s | headless=%s | max_pages=%d | delay=%ds",
+        len(products), browser, headless, max_pages, DELAY_BETWEEN_PRODUCTS,
     )
 
     # Ejecutar migrations de Postgres (solo si está habilitado)
@@ -90,7 +93,7 @@ def main() -> None:
     all_stats = []
 
     try:
-        for product in products:
+        for idx, product in enumerate(products):
             logger.info("=== Procesando producto: %s ===", product)
             results = scrape_all_pages(
                 driver, product, max_pages=max_pages, results_per_page=10
@@ -111,6 +114,11 @@ def main() -> None:
             # Calcular estadísticas para la tabla resumen
             stats = compute_stats(results, product)
             all_stats.append(stats)
+
+            # Pausa entre productos para evitar throttling (excepto el último)
+            if idx < len(products) - 1:
+                logger.info("Esperando %ds antes del siguiente producto...", DELAY_BETWEEN_PRODUCTS)
+                time.sleep(DELAY_BETWEEN_PRODUCTS)
 
     finally:
         driver.quit()

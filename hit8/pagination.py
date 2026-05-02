@@ -15,6 +15,7 @@ El offset 0 → primera página (sin sufijo _Desde_), offset > 0 → _Desde_{off
 import os
 import logging
 import urllib.parse
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +191,7 @@ def scrape_all_pages(
                 "Página %d completada | resultados=%d | acumulado=%d",
                 page, len(page_results), len(all_results),
             )
+            time.sleep(3)
         except Exception as e:
             logger.error(
                 "Fallo en página %d | producto=%s | %s",

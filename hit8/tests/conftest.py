@@ -4,8 +4,10 @@ import json
 import os
 import sys
 
-# Agrega el directorio raíz de hit8 al path para que los tests puedan importar módulos
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Agrega el directorio raíz de hit8 al path para importar módulos
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)
 
 
 @pytest.fixture
@@ -19,7 +21,11 @@ def mock_element():
 
 @pytest.fixture
 def context():
-    return {"producto": "iPhone 16 Pro Max", "browser": "chrome", "resultado_index": 0}
+    return {
+        "producto": "iPhone 16 Pro Max",
+        "browser": "chrome",
+        "resultado_index": 0,
+    }
 
 
 @pytest.fixture
@@ -42,5 +48,7 @@ def sample_results(sample_item):
 @pytest.fixture
 def output_json_file(tmp_path, sample_results):
     f = tmp_path / "iphone_16_pro_max.json"
-    f.write_text(json.dumps(sample_results, ensure_ascii=False), encoding="utf-8")
+    f.write_text(
+        json.dumps(sample_results, ensure_ascii=False), encoding="utf-8"
+    )
     return str(f)

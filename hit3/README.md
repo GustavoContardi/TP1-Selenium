@@ -22,7 +22,7 @@ Desde la raíz del proyecto:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r hit3/requeriments.txt
+pip install -r hit3/requirements.txt
 ```
 
 ## Ejecución

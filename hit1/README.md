@@ -15,7 +15,7 @@ Desde la raíz del proyecto (`TP1-Selenium/`):
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r hit1/requeriments.txt
+pip install -r hit1/requirements.txt
 ```
 
 ## Ejecución

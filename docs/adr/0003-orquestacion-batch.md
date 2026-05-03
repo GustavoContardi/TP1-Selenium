@@ -2,7 +2,11 @@
 
 - **Date:** 2026-05-01
 - **Status:** Accepted
-- **Deciders:** Mateo y equipo
+- **Deciders:** CFZ++
+
+## Estado
+
+Aceptado
 
 ## Contexto
 

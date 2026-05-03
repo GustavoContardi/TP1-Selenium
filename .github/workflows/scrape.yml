@@ -111,7 +111,7 @@ jobs:
         working-directory: hit8
         run: |
           pip install --upgrade pip
-          pip install -r hit8/requirements.txt
+          pip install -r requirements.txt
           pip install pytest pytest-cov
 
       - name: Install Chrome
@@ -151,18 +151,175 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: azure/setup-kubectl@v4
-
-      - name: Dry-run hit7 manifests
+      - name: Install kubeconform
         run: |
-          for f in hit7/k8s/*.yaml; do
-            echo "Validando $f ..."
-            kubectl apply --dry-run=client --validate=false -f "$f" && echo "OK: $f" || { echo "FALLO: $f"; exit 1; }
-          done
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
 
-      - name: Dry-run hit8 manifests
+      - name: Validate hit7 manifests
+        run: kubeconform -strict hit7/k8s/*.yaml
+
+      - name: Validate hit8 manifests
+        run: kubeconform -strict hit8/k8s/*.yamlname: Scraper CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  # ── 1. Gitleaks: detectar secrets hardcodeados ──────────────────────────────
+  secrets-scan:
+    name: Gitleaks — secrets scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── 2. Build de la imagen Docker ────────────────────────────────────────────
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: secrets-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ml-scraper image
+        run: docker build -t ml-scraper:latest hit8/
+
+      - name: Save image as artifact
+        run: docker save ml-scraper:latest -o /tmp/ml-scraper.tar
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/ml-scraper.tar
+          retention-days: 1
+
+  # ── 3. Scraper headless en Chrome y Firefox (paralelo) ──────────────────────
+  scrape:
+    name: Scrape (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chrome, firefox]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: docker load -i /tmp/ml-scraper.tar
+
+      - name: Install Chrome
+        if: matrix.browser == 'chrome'
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install Firefox
+        if: matrix.browser == 'firefox'
+        uses: browser-actions/setup-firefox@v1
+
+      - name: Run scraper headless
         run: |
-          for f in hit8/k8s/*.yaml; do
-            echo "Validando $f ..."
-            kubectl apply --dry-run=client --validate=false -f "$f" && echo "OK: $f" || { echo "FALLO: $f"; exit 1; }
-          done
+          mkdir -p output
+          docker run --rm \
+            -e BROWSER=${{ matrix.browser }} \
+            -e HEADLESS=true \
+            -v $(pwd)/output:/app/output \
+            --shm-size=1g \
+            ml-scraper:latest
+
+      - name: Upload JSON outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-output-${{ matrix.browser }}
+          path: output/
+          retention-days: 7
+
+  # ── 4. Tests + cobertura ≥ 70% ──────────────────────────────────────────────
+  test:
+    name: Tests (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    needs: secrets-scan
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chrome, firefox]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        working-directory: hit8
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Install Chrome
+        if: matrix.browser == 'chrome'
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install Firefox
+        if: matrix.browser == 'firefox'
+        uses: browser-actions/setup-firefox@v1
+
+      - name: Run tests with coverage
+        working-directory: hit8
+        env:
+          BROWSER: ${{ matrix.browser }}
+          HEADLESS: "true"
+        run: |
+          python -m pytest \
+            --cov=. \
+            --cov-report=term-missing \
+            --cov-report=html:coverage_html \
+            --cov-fail-under=70 \
+            -v
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.browser }}
+          path: hit8/coverage_html/
+          retention-days: 7
+
+  # ── 5. Validación de manifests k8s ──────────────────────────────────────────
+  validate-k8s:
+    name: Validate Kubernetes manifests
+    runs-on: ubuntu-latest
+    needs: secrets-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate hit7 manifests
+        run: kubeconform -strict hit7/k8s/*.yaml
+
+      - name: Validate hit8 manifests
+        run: kubeconform -strict hit8/k8s/*.yaml

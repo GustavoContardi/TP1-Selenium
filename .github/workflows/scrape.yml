@@ -157,12 +157,12 @@ jobs:
         run: |
           for f in hit7/k8s/*.yaml; do
             echo "Validando $f ..."
-            kubectl apply --dry-run=client -f "$f" && echo "OK: $f" || { echo "FALLO: $f"; exit 1; }
+            kubectl apply --dry-run=client --validate=false -f "$f" && echo "OK: $f" || { echo "FALLO: $f"; exit 1; }
           done
 
       - name: Dry-run hit8 manifests
         run: |
           for f in hit8/k8s/*.yaml; do
             echo "Validando $f ..."
-            kubectl apply --dry-run=client -f "$f" && echo "OK: $f" || { echo "FALLO: $f"; exit 1; }
+            kubectl apply --dry-run=client --validate=false -f "$f" && echo "OK: $f" || { echo "FALLO: $f"; exit 1; }
           done

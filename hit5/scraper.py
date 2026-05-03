@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from logging_setup import setup_logging
 from retry import with_backoff
-from browser_factory import build_driver
+from driver_factory import build_driver
 import dom_selectors as selectors
 import extractors
 

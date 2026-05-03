@@ -1,30 +1,75 @@
 # TP1-Selenium
-TP1 Selenium
 
- 
+Scraper de MercadoLibre Argentina con Selenium, Docker y Kubernetes.
+
+## Prerrequisitos cumplidos (TP 0)
+
+`kubectl get nodes` devuelve el nodo en estado `Ready`:
+
+![nodo ready](PrereqImg/nodoReady.png)
+
+Nginx de prueba corriendo y accesible via `curl localhost:8080`:
+
+![nginx test](PrereqImg/testnginx.png)
+
+---
+
+## Estructura
+
+```
+TP1-Selenium/
+├── hit1/        # Scraper básico (un producto)
+├── hit2/        # Multi-browser (Chrome + Firefox)
+├── hit3/        # Screenshots + filtros
+├── hit4/        # Multi-producto + extracción de campos
+├── hit5/        # Robustez: retry, backoff, selectores centralizados
+├── hit6/        # Tests automatizados (pytest, 95% cobertura)
+├── hit7/        # Docker + Kubernetes (Job + CronJob)
+├── hit8/        # Paginación + estadísticas + PostgreSQL
+└── docker-compose.yml
+```
+
+---
+
+## Parte 1 — Hits 1 a 6 (local)
+
+```bash
+cd hitX
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+BROWSER=chrome HEADLESS=true python scraper.py
+```
+
+Tests (hit6 en adelante):
+
+```bash
+pip install pytest pytest-cov
+python -m pytest --cov=. --cov-fail-under=70 -v
+```
+
+---
+
+## Parte 2 — Docker
+
+```bash
+# Build
+docker build -t ml-scraper:latest hit8/
+
+# Correr con docker compose
+docker compose up scraper
+BROWSER=firefox docker compose up scraper
+docker compose run --rm lint
+```
+
+---
 
 ## Hit #7 — Kubernetes
-
-### Prerrequisitos
-- k3s o k3d instalado y cluster activo (ver TP 0)
-- Imagen Docker buildeada: `docker build -t ml-scraper:latest .`
-
-### Prerrequisitos cumplidos
-
-kubectl get nodes me devuelve un nodo en Ready.
-
-![nodo ready](/PrereqImg/nodoReady.png)
-
-Pude correr el nginx-test y abrirlo con curl localhost:8080.
-
-![nginx test](/PrereqImg/nginxTest.png)
-
-Los otros prerrequisitos pueden verse en las etapas de ejecución del punto y en las instrucciones a continuación.
 
 ### Importar la imagen al cluster
 
 **k3s nativo:**
 ```bash
+docker build -t ml-scraper:latest hit7/
 docker save ml-scraper:latest -o /tmp/ml-scraper.tar
 sudo k3s ctr images import /tmp/ml-scraper.tar
 rm /tmp/ml-scraper.tar
@@ -35,57 +80,38 @@ rm /tmp/ml-scraper.tar
 k3d image import ml-scraper:latest -c <nombre-del-cluster>
 ```
 
-### Aplicar todos los manifests
+### Aplicar manifests y verificar
+
 ```bash
 kubectl apply -f hit7/k8s/
-```
 
-### Disparar el Job one-off y seguir los logs
-```bash
-kubectl get jobs
-kubectl wait --for=condition=complete job/scraper-once --timeout=600s
+# Seguir el Job one-off
+kubectl get pods -l job-type=one-off
 kubectl logs -l job-type=one-off -f
-```
 
-### Verificar los JSON generados en el PVC
-```bash
-kubectl exec -it $(kubectl get pod -l job-type=one-off -o jsonpath='{.items[0].metadata.name}') -- ls /app/output
-```
-
-### Verificar el CronJob
-```bash
+# Verificar el CronJob
 kubectl get cronjobs
 kubectl get jobs --watch
-```
 
-### Limpiar todos los recursos
-```bash
+# Limpiar
 kubectl delete -f hit7/k8s/
 ```
 
 ---
 
-## Hit #8 — Capacidad extendida (paginación, estadísticas, histórico Postgres)
+## Hit #8 — Kubernetes con PostgreSQL
 
 ### Nuevas capacidades
 
 | Capacidad | Descripción |
 |---|---|
-| Paginación | Hasta 30 resultados navegando 3 páginas por producto (`MAX_PAGES=3`) |
-| Estadísticas | Tabla de min/max/mediana/promedio/desvío impresa en stdout + `output/stats.json` |
+| Paginación | Hasta 30 resultados navegando 3 páginas por producto |
+| Estadísticas | Tabla min/max/mediana/promedio/desvío en stdout + `output/stats.json` |
 | Histórico | Resultados persistidos en PostgreSQL para acumular corridas del CronJob |
 
-### Prerrequisitos adicionales
+### Despliegue
 
-- PostgreSQL desplegado en el cluster (ver sección "Despliegue de Postgres en k3s").
-- `k8s/postgres-secret.yaml` creado manualmente (ver abajo, **no** se commitea).
-
----
-
-### Despliegue de Postgres en k3s
-
-#### 1. Crear el Secret (NUNCA commitear este archivo)
-
+# 1. Crear el Secret (NUNCA commitear este archivo)
 ```bash
 # El archivo k8s/postgres-secret.yaml está en .gitignore.
 # Crearlo manualmente o inyectarlo desde CI como GitHub Secret.
@@ -102,32 +128,26 @@ stringData:
   POSTGRES_USER: scraper
   POSTGRES_PASSWORD: <tu-password-segura>
 EOF
-```
 
-#### 2. Aplicar todos los manifests de Postgres
+# 2. Importar imagen y aplicar manifests
+docker build -t ml-scraper:latest hit8/
+docker save ml-scraper:latest -o /tmp/ml-scraper.tar
+sudo k3s ctr images import /tmp/ml-scraper.tar && rm /tmp/ml-scraper.tar
+kubectl apply -f hit8/k8s/
 
-```bash
-kubectl apply -f hit8/k8s/postgres-secret.yaml
-kubectl apply -f hit8/k8s/postgres-pvc.yaml
-kubectl apply -f hit8/k8s/postgres-statefulset.yaml
-kubectl apply -f hit8/k8s/postgres-service.yaml
-```
-
-#### 3. Esperar a que Postgres esté listo
-
-```bash
+# 3. Esperar Postgres y seguir logs
 kubectl wait --for=condition=ready pod -l app=postgres --timeout=120s
+kubectl logs -l job-type=one-off -f
+
+# 4. Consultar histórico
+kubectl exec -it $(kubectl get pod -l app=postgres -o jsonpath='{.items[0].metadata.name}') \
+  -- psql -U scraper -d scraper_db -c \
+  "SELECT producto, MIN(precio), MAX(precio), COUNT(*) FROM scrape_results GROUP BY producto;"
+
+# 5. Limpiar
+kubectl delete -f hit8/k8s/
+kubectl delete secret postgres-credentials
 ```
-
-#### 4. Aplicar manifests del scraper
-
-```bash
-kubectl apply -f hit8/k8s/configmap.yaml
-kubectl apply -f hit8/k8s/job.yaml
-kubectl apply -f hit8/k8s/cronjob.yaml
-```
-
----
 
 ### Variables de entorno
 
@@ -135,79 +155,18 @@ kubectl apply -f hit8/k8s/cronjob.yaml
 |---|---|---|
 | `BROWSER` | `chrome` \| `firefox` | `chrome` |
 | `HEADLESS` | `true` \| `false` | `true` |
-| `MAX_PAGES` | Páginas a paginar por producto | `3` |
-| `PRODUCTS` | Lista de productos (newline-separated) | 3 productos por defecto |
-| `POSTGRES_HOST` | Host de Postgres; si no está definido, se **omite** la escritura a la base | — |
-| `POSTGRES_PORT` | Puerto de Postgres | `5432` |
-| `POSTGRES_DB` | Nombre de la base de datos | `scraper_db` |
-| `POSTGRES_USER` | Usuario (viene del Secret) | — |
-| `POSTGRES_PASSWORD` | Contraseña (viene del Secret) | — |
-
-> **Compatibilidad**: Si `POSTGRES_HOST` no está definido, el scraper funciona
-> exactamente igual que en los Hits anteriores (solo escribe JSON locales).
+| `MAX_PAGES` | Páginas por producto | `3` |
+| `PRODUCTS` | Lista separada por newline | 3 productos por defecto |
+| `POSTGRES_HOST` | Si no está definido, se omite la escritura a la DB | — |
 
 ---
 
-### Verificar el histórico acumulado entre corridas
-
-#### Query de resumen de 7 días
-
-```sql
-SELECT
-    producto,
-    MIN(precio)                          AS precio_min,
-    MAX(precio)                          AS precio_max,
-    ROUND(AVG(precio), 2)                AS precio_avg,
-    COUNT(DISTINCT DATE_TRUNC('hour', scraped_at)) AS n_corridas
-FROM scrape_results
-WHERE scraped_at > NOW() - INTERVAL '7 days'
-GROUP BY producto
-ORDER BY producto;
-```
-
-#### Ejecutar desde fuera del cluster con `kubectl exec`
+## Pre-commit hooks
 
 ```bash
-kubectl exec -it $(kubectl get pod -l app=postgres -o jsonpath='{.items[0].metadata.name}') \
-  -- psql -U scraper -d scraper_db -c "
-SELECT producto, MIN(precio), MAX(precio), ROUND(AVG(precio),2), COUNT(*) AS n_filas
-FROM scrape_results
-GROUP BY producto;"
-```
-
----
-
-### Correr los tests (cobertura ≥ 70 %)
-
-```bash
-cd hit8
-pip install -r requirements.txt
-pip install pytest pytest-cov
-pytest --cov=. --cov-fail-under=70
-```
-
-### Limpiar todos los recursos de hit8
-
-```bash
-kubectl delete -f hit8/k8s/
-```
-
-## Activación de .pre-commit-config.yaml
-
-Para activar y ejecutar los hooks de pre-commit que configuramos, debes seguir estos tres pasos en tu terminal (dentro de la carpeta del proyecto):
-
-1. Instalar la herramienta
-Primero, asegúrate de tener pre-commit instalado en tu entorno de Python:
-
-bash
 pip install pre-commit
-2. Instalar los git hooks
-Este paso vincula la configuración del archivo .pre-commit-config.yaml con tu repositorio local de Git. A partir de ahora, se ejecutarán automáticamente cada vez que hagas un git commit:
+pre-commit install          # activa los hooks localmente
+pre-commit run --all-files  # corre manualmente
+```
 
-bash
-pre-commit install
-3. Ejecutar el análisis manualmente
-Si quieres analizar todo el código del proyecto inmediatamente (sin esperar a hacer un commit), ejecuta:
-
-bash
-pre-commit run --all-files
+Hooks: `gitleaks` (secrets), `ruff` (linter + formatter), `check-yaml`.

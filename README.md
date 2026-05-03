@@ -1,11 +1,25 @@
 # TP1-Selenium
 TP1 Selenium
 
+ 
+
 ## Hit #7 — Kubernetes
 
 ### Prerrequisitos
 - k3s o k3d instalado y cluster activo (ver TP 0)
 - Imagen Docker buildeada: `docker build -t ml-scraper:latest .`
+
+### Verificaciones de prerrequisitos
+
+kubectl get nodes me devuelve un nodo en Ready.
+
+![nodo ready](/PrereqImg/nodoReady.png)
+
+Pude correr el nginx-test y abrirlo con curl localhost:8080.
+
+![nginx test](/PrereqImg/nginxTest.png)
+
+Los otros prerrequisitos pueden verse en las etapas de ejecución del punto y en las instrucciones a continuación.
 
 ### Importar la imagen al cluster
 

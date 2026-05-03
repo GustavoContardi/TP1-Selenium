@@ -9,7 +9,7 @@ TP1 Selenium
 - k3s o k3d instalado y cluster activo (ver TP 0)
 - Imagen Docker buildeada: `docker build -t ml-scraper:latest .`
 
-### Verificaciones de prerrequisitos
+### Prerrequisitos cumplidos
 
 kubectl get nodes me devuelve un nodo en Ready.
 
@@ -191,3 +191,23 @@ pytest --cov=. --cov-fail-under=70
 ```bash
 kubectl delete -f hit8/k8s/
 ```
+
+## Activación de .pre-commit-config.yaml
+
+Para activar y ejecutar los hooks de pre-commit que configuramos, debes seguir estos tres pasos en tu terminal (dentro de la carpeta del proyecto):
+
+1. Instalar la herramienta
+Primero, asegúrate de tener pre-commit instalado en tu entorno de Python:
+
+bash
+pip install pre-commit
+2. Instalar los git hooks
+Este paso vincula la configuración del archivo .pre-commit-config.yaml con tu repositorio local de Git. A partir de ahora, se ejecutarán automáticamente cada vez que hagas un git commit:
+
+bash
+pre-commit install
+3. Ejecutar el análisis manualmente
+Si quieres analizar todo el código del proyecto inmediatamente (sin esperar a hacer un commit), ejecuta:
+
+bash
+pre-commit run --all-files

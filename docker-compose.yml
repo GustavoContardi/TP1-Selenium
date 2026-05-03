@@ -1,0 +1,23 @@
+services:
+  scraper:
+    build:
+      context: ./hit8
+    image: ml-scraper:latest
+    environment:
+      - BROWSER=${BROWSER:-chrome}
+      - HEADLESS=${HEADLESS:-true}
+      # Opcionales para persistencia en Postgres
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-scraper_db}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./output:/app/output
+
+  lint:
+    image: astralsh/ruff:latest
+    volumes:
+      - ./hit8:/app
+    working_dir: /app
+    command: check .

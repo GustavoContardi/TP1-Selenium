@@ -111,7 +111,7 @@ jobs:
         working-directory: hit8
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r hit8/requirements.txt
           pip install pytest pytest-cov
 
       - name: Install Chrome

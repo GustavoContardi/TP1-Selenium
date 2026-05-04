@@ -10,4 +10,3 @@ spec:
   ports:
     - port: 5432
       targetPort: 5432
-  clusterIP: None   # Headless service: el scraper resuelve "postgres" directamente al Pod

@@ -1,2 +1,2 @@
 # UNLu-SIP-2026-TP
-Trabajo prácticos de Seminario de Integración Profesional - 2026
+Trabajos prácticos de Seminario de Integración Profesional - 2026

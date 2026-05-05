@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: scraper-once
+  labels:
+    app: ml-scraper
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: ml-scraper
+        job-type: one-off
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:16-alpine
+          command: ['sh', '-c', 'until pg_isready -h postgres -U scraper; do echo "esperando postgres..."; sleep 2; done']
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+      containers:
+        - name: scraper
+          image: ml-scraper:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: scraper-config
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            - name: output
+              mountPath: /app/output
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      volumes:
+        - name: output
+          persistentVolumeClaim:
+            claimName: scraper-output
+        - name: dshm       
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi

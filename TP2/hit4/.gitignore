@@ -1,0 +1,28 @@
+# Secretos de Kubernetes — NUNCA commitear
+# Crear manualmente antes de kubectl apply -f k8s/
+# Ver README.md sección "Despliegue en k3s" para instrucciones.
+k8s/postgres-secret.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Coverage
+.coverage
+coverage_html/
+coverage.xml
+
+# Output del scraper
+output/
+
+# Pytest cache
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/

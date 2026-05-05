@@ -1,0 +1,19 @@
+# Helm ya configura el NodePort 30000 mediante grafana-values.yaml
+# (service.type: NodePort, service.nodePort: 30000). 
+# Si en algún momento decides no usar helm para el Service y prefieres
+# crear un Ingress o un Service de tipo NodePort manual, debes colocarlo aquí.
+#
+# Ejemplo de Service NodePort:
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: grafana-nodeport
+#   namespace: observability
+# spec:
+#   type: NodePort
+#   ports:
+#     - port: 80
+#       targetPort: 3000
+#       nodePort: 30000
+#   selector:
+#     app.kubernetes.io/name: grafana

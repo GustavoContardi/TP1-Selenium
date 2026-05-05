@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build ml-scraper image
-        run: docker build -t ml-scraper:latest hit8/
+        run: docker build -t ml-scraper:latest TP1/hit8/
 
       - name: Save image as artifact
         run: docker save ml-scraper:latest -o /tmp/ml-scraper.tar
@@ -108,7 +108,7 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        working-directory: hit8
+        working-directory: TP1/hit8
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
@@ -123,7 +123,7 @@ jobs:
         uses: browser-actions/setup-firefox@v1
 
       - name: Run tests with coverage
-        working-directory: hit8
+        working-directory: TP1/hit8
         env:
           BROWSER: ${{ matrix.browser }}
           HEADLESS: "true"
@@ -140,7 +140,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report-${{ matrix.browser }}
-          path: hit8/coverage_html/
+          path: TP1/hit8/coverage_html/
           retention-days: 7
 
   # ── 5. Validación de manifests k8s ──────────────────────────────────────────
@@ -157,7 +157,7 @@ jobs:
           sudo mv kubeconform /usr/local/bin/
 
       - name: Validate hit7 manifests
-        run: kubeconform -strict hit7/k8s/*.yaml
+        run: kubeconform -strict TP1/hit7/k8s/*.yaml
 
       - name: Validate hit8 manifests
-        run: kubeconform -strict hit8/k8s/*.yaml
+        run: kubeconform -strict TP1/hit8/k8s/*.yaml

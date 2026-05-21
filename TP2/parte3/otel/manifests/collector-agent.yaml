@@ -7,6 +7,12 @@ spec:
   mode: daemonset
   image: otel/opentelemetry-collector-contrib:0.110.0
   serviceAccount: otel-collector
+  env:
+    - name: ELASTIC_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: elastic-credentials
+          key: password
   resources:
     requests: { cpu: 100m, memory: 128Mi }
     limits:   { cpu: 300m, memory: 256Mi }
@@ -87,24 +93,49 @@ spec:
       # Renombrar campos para que sean idiomáticos en cada backend
       attributes:
         actions:
-          # Loki prefiere "service" como label primario
           - key: service
             from_attribute: app
             action: insert
+          - key: log_id
+            value: ""
+            action: insert
+      
+      transform:
+        log_statements:
+          - context: log
+            statements:
+              - 'set(attributes["log_id"], UUID()) where attributes["log_id"] == nil'
 
     exporters:
-      # En este Hit solo debug. Hit #3 agrega loki + elasticsearch.
       debug:
-        verbosity: detailed
-        sampling_initial: 5
-        sampling_thereafter: 200
+        verbosity: basic   # bajamos verbosity ahora que el pipeline funciona
+
+      # === Backend #1: Loki ===
+      otlphttp/loki:
+        endpoint: http://loki.observability.svc.cluster.local:3100/otlp
+        # Loki ≥ 3.0 acepta OTLP nativo en el endpoint /otlp
+        # (forma "moderna", reemplaza al exporter "loki" legacy)
+
+      # === Backend #2: Elasticsearch ===
+      elasticsearch:
+        endpoints:
+          - https://elasticsearch-master.elastic.svc.cluster.local:9200
+        user: elastic
+        password: ${env:ELASTIC_PASSWORD}
+        tls:
+          insecure_skip_verify: true   # cert self-signed del ECK operator
+        # Index naming siguiendo la convención del TP 2 · Parte 2
+        logs_index: scraper-logs
+        # Mappings dinámicos: que el campo "level" sea keyword, no text
+        mapping:
+          mode: ecs
 
     service:
       pipelines:
         logs:
           receivers: [filelog, otlp]
-          processors: [k8sattributes, attributes, batch]
-          exporters: [debug]
+          processors: [k8sattributes, attributes, transform, batch]
+          exporters: [otlphttp/loki, elasticsearch]
       telemetry:
         logs:
           level: info

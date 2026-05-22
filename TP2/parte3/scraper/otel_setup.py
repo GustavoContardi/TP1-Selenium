@@ -2,7 +2,7 @@
 Setup de OpenTelemetry SDK: TracerProvider + LoggerProvider con OTLP exporter.
 Reemplaza logging_setup.py del TP 2 · Parte 1.
 """
-"""
+
 import atexit
 import logging
 import os
@@ -50,4 +50,3 @@ def setup_otel(service_name: str = "scraper") -> None:
     # Flush garantizado al salir — evita perder los últimos logs en el buffer del batch
     atexit.register(logger_provider.shutdown)
     atexit.register(tracer_provider.shutdown)
-"""

@@ -22,7 +22,7 @@ from pathlib import Path
 
 from selenium.webdriver.support.ui import WebDriverWait
 
-from logging_setup import setup_logging
+from otel_setup import setup_otel
 from driver_factory import build_driver
 from pagination import scrape_all_pages, MAX_PAGES
 from stats import compute_stats, print_stats_table, save_stats
@@ -71,7 +71,7 @@ def save_json(results: list[dict], product: str) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    setup_logging()
+    setup_otel(service_name="scraper")
     products = get_products()
     browser = os.getenv("BROWSER", "chrome")
     headless = os.getenv("HEADLESS", "false").lower() == "true"

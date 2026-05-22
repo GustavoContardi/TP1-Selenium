@@ -33,7 +33,7 @@ spec:
                       key: POSTGRES_PASSWORD
           containers:
             - name: scraper
-              image: ghcr.io/<usuario>/scraper:otel-v1
+              image: ghcr.io/gustavocontardi/scraper:otel-v1
               env:
                 - name: NODE_IP
                   valueFrom:
